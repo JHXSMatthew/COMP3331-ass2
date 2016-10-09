@@ -27,6 +27,10 @@ public class G_Graph {
 
     }
 
+    public List<G_Node> getAllNodes(){
+        return nodes;
+    }
+
     public boolean isEdgeThere(G_Edge edge){
         for(G_Edge e : edges){
             if(e.isEdge(edge.getNodes())){
@@ -36,13 +40,23 @@ public class G_Graph {
         return false;
     }
 
-    public G_Node add(String id) {
+    public synchronized G_Node add(String id) {
         G_Node node = new G_Node(id);
         this.nodes.add(node);
         return node;
     }
 
-    public G_Node remove(String id){
+    public G_Edge getEdge(G_Node node1, G_Node node2){
+        List<G_Edge> edges = getAllConnections(node1);
+        for(G_Edge edge : edges){
+            if(edge.isEdge(node2)){
+                return edge;
+            }
+        }
+        return null;
+    }
+
+    public synchronized G_Node remove(String id){
         Iterator<G_Node> iterator = nodes.iterator();
         G_Node node = null;
         while(iterator.hasNext()){

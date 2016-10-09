@@ -23,6 +23,13 @@ public class G_Edge {
         return Arrays.copyOf(connected,2);
     }
 
+    public G_Node getTheOtherNode(G_Node node){
+        if(connected[0] == node){
+            return node;
+        }
+        return connected[1];
+    }
+
     public int getCost(){
         return cost;
     }
