@@ -1,3 +1,5 @@
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -14,8 +16,8 @@ public class Lsr {
 
     public static final boolean DEBUG = true;
 
-    public static void main(String[] args){
-        Scanner scanner = new Scanner(args[2]);
+    public static void main(String[] args) throws FileNotFoundException {
+        Scanner scanner = new Scanner(new File(args[2]));
         List<Neighbour> neighbours = Collections.synchronizedList(new ArrayList<Neighbour>());
         int num = -2;
         int curr = 0;
@@ -122,6 +124,8 @@ public class Lsr {
                 }
             }
         },0,20);
+        System.out.println("Start up,  listen on " + port + " router ID " + id);
+        listen();
     }
 
     /**
@@ -136,7 +140,7 @@ public class Lsr {
                     , heartbeats
                     , seq++
                     , System.currentTimeMillis() + TTL_KEEPALIVE
-                    , null);
+                    , (G_Edge) null);
         }else {
             List<G_Edge> temp = graph.getAllConnections(id);
             lsPacket = new LSPacket(id
@@ -172,6 +176,9 @@ public class Lsr {
                 e.printStackTrace();
             }
             LSPacket lsPacket = new LSPacket(packet.getData());
+            System.out.println("packet received!");
+            System.out.println("packet Error!");
+
             if(lsPacket.isExpired()){
                 continue;
             }
@@ -306,6 +313,7 @@ public class Lsr {
 
         //remove the old forward "table"
         forwardTable.clear();
+        System.out.println("Router update ..." );
         for(G_SearchingNode searchingNode : searchingNodes){
             System.out.println(searchingNode.getSearchingString());
             forwardTable.put(searchingNode.getNode(),graph.getEdge(graph.getNode(id,false),searchingNode.getDirectNode()));

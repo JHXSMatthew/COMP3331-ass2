@@ -16,7 +16,11 @@ public class G_SearchingNode implements Comparable<G_SearchingNode>{
      */
     public G_SearchingNode(G_Node node, G_SearchingNode previous, int cost){
         this.last = previous;
-        this.cost = previous.cost + cost;
+        if(previous == null){
+            cost = 0;
+        }else {
+            this.cost = previous.cost + cost;
+        }
         this.node = node;
     }
 
