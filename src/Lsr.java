@@ -7,6 +7,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by matthew on 8/10/16.
@@ -81,7 +82,8 @@ public class Lsr {
         }
 
         timer = new Timer();
-        timer.scheduleAtFixedRate(new TimerTask() {
+
+        timer.schedule(new TimerTask() {
             @Override
             public void run() {
                 if(updateRouter){
@@ -90,7 +92,7 @@ public class Lsr {
             }
         },0,ROUTE_UPDATE_INTERVAL);
 
-        timer.scheduleAtFixedRate(new TimerTask() {
+        timer.schedule(new TimerTask() {
             @Override
             public void run() {
                 try {
@@ -103,28 +105,30 @@ public class Lsr {
                     Neighbour neighbour = neighbourIterator.next();
                     if(neighbour.isDead()){
                         neighbourIterator.remove();
-                        System.err.println("Neighbour"+ neighbour.getId() + "dead, RIP");
+                        System.out.println("Neighbour"+ neighbour.getId() + "dead, RIP");
                     }
                 }
             }
         },0,UPDATE_INTERVAL);
 
-        timer.scheduleAtFixedRate(new TimerTask() {
+
+        timer.schedule(new TimerTask() {
             @Override
             public void run() {
+                System.out.println("time?");
                 try {
                     sendPacket(true);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                for (Neighbour neighbour : neighbourList){
+                for (Neighbour neighbour : neighbours){
                     if(!neighbour.isAlive()){
                         System.err.println("beat failed.");
                     }
                 }
             }
         },0,20);
-        System.out.println("Start up,  listen on " + port + " router ID " + id);
+        System.out.println("Start up,  listen on " + port + " router ID " + id + " nighbours " + neighbours.size() );
         listen();
     }
 
@@ -285,7 +289,8 @@ public class Lsr {
         for(Neighbour neighbour : neighbours){
             if(duplicated != null && neighbour.equals(duplicated))
                 continue;
-            send.setAddress(InetAddress.getLocalHost());
+            System.out.println("sending packets to "+ neighbour.getId() + " " + neighbour.getPort() );
+            send.setAddress(InetAddress.getByName("127.0.0.1"));
             send.setPort(neighbour.getPort());
             socket.send(send);
         }

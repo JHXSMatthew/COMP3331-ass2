@@ -36,7 +36,7 @@ public class LSPacket {
 
     //attributes of this packet, included in packet header
     private String advertisingRouter;
-    private boolean[] flags = new boolean[4];
+    private boolean[] flags = new boolean[8];
     private long age = 0;
     private int seq = -1;
 
@@ -199,10 +199,18 @@ public class LSPacket {
      * @return the bytes of this packet
      */
     public byte[] toBytes(){
-        if(data == null)
+
+        if(data == null && !isHeartbeat())
             pack();
 
-        byte[] packet = new byte[HEADER_LENGTH + data.length];
+        int length =  HEADER_LENGTH;
+        try{
+            length += data.length;
+        }catch(NullPointerException e){
+
+        }
+
+        byte[] packet = new byte[length];
         //long to bytes array, so bad to do so.
         PacketUtils.fill4BytesFromInt( (int) age>>12,packet,0);
         PacketUtils.fill4BytesFromInt( (int) age>>8,packet,4);
@@ -222,7 +230,9 @@ public class LSPacket {
         packet[17] = flagsRep;
         PacketUtils.fill4BytesFromInt(seq,packet,18);
         PacketUtils.fill4BytesFromInt(data.length,packet,22);
-        System.arraycopy(data , 0 ,packet , HEADER_LENGTH - 1 , data.length);
+        if(!isHeartbeat()) {
+            System.arraycopy(data, 0, packet, HEADER_LENGTH - 1, data.length);
+        }
         return packet;
     }
 
