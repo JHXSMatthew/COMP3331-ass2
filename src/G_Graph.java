@@ -56,6 +56,7 @@ public class G_Graph {
     }
 
     public synchronized G_Node remove(String id){
+        System.err.println("Removing id=" + id);
         Iterator<G_Node> iterator = nodes.iterator();
         G_Node node = null;
         while(iterator.hasNext()){

@@ -111,7 +111,7 @@ public class Lsr {
                             if(!neighbour.isAlive()){
                                 //System.err.println("Node " + neighbour.getId() + " beat failed.");
                             }
-                      }
+                         }
                     }
                 }
                 // per second LS packet sending
@@ -130,7 +130,7 @@ public class Lsr {
                             if (neighbour.isDead()) {
                                 neighbourIterator.remove();
                                 graph.remove(neighbour.getId());
-                                System.err.println("Neighbour" + neighbour.getId() + "dead, RIP");
+                                System.err.println("I heard Neighbour " + neighbour.getId() + " dead, RIP");
                             }
                         }
                     }
@@ -149,11 +149,10 @@ public class Lsr {
                     }
                     count = 0;
                 }
-
             }
         },0,1);
 
-        System.out.println("Start up,  listen on " + port + " router ID " + id + " nighbours " + neighbours.size() );
+        System.out.println("Router: " + id + " Listen on: " + port);
         listen();
     }
 
@@ -373,7 +372,9 @@ public class Lsr {
                 G_SearchingNode searchingNode =  getShortestPath(graph.getNode(id,false),node);
                 searchingNodes.add(searchingNode);
             } catch (Exception e) {
-                e.printStackTrace();
+                if(DEBUG) {
+                    e.printStackTrace();
+                }
             }
         }
 
