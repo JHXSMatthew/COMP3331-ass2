@@ -18,10 +18,10 @@ public class PacketUtils {
         data[offset + 3] = (byte) (i >> 0);
     }
 
-    public static void fill4BytesToBuffer(int i , ByteBuffer buffer){
-        buffer.put((byte)(i >> 24));
-        buffer.put((byte)(i >> 16));
-        buffer.put((byte)(i >> 8));
-        buffer.put((byte)(i >> 0));
+    public static void fill4BytesToBuffer(int i, ByteBuffer buffer) {
+        buffer.put((byte) (i >> 24));
+        buffer.put((byte) (i >> 16));
+        buffer.put((byte) (i >> 8));
+        buffer.put((byte) (i >> 0));
     }
 }

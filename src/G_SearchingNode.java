@@ -3,59 +3,58 @@
  * the Searching node, use for searching only.
  * it represents the current searching state in OOP.
  */
-public class G_SearchingNode implements Comparable<G_SearchingNode>{
+public class G_SearchingNode implements Comparable<G_SearchingNode> {
 
     private G_SearchingNode last;
     private int cost; // the cumulative cost.
     private G_Node node; // the reference of original node.
 
     /**
-     *
      * @param previous the previous node
-     * @param cost the cost to get here from previous node
+     * @param cost     the cost to get here from previous node
      */
-    public G_SearchingNode(G_Node node, G_SearchingNode previous, int cost){
+    public G_SearchingNode(G_Node node, G_SearchingNode previous, int cost) {
         this.last = previous;
-        if(previous == null){
+        if (previous == null) {
             cost = 0;
-        }else {
+        } else {
             this.cost = previous.cost + cost;
         }
         this.node = node;
     }
 
 
-    public void getPath(StringBuilder builder){
-        if(last != null){
+    public void getPath(StringBuilder builder) {
+        if (last != null) {
             last.getPath(builder);
         }
         builder.append(node.getId());
     }
 
-    public String getSearchingString(){
+    public String getSearchingString() {
         StringBuilder builder = new StringBuilder();
         getPath(builder);
         return "least-cost path to node " + node.getId() + ": " + builder.toString() + " and the cost is " + cost;
     }
 
-    public G_Node getNode(){
+    public G_Node getNode() {
         return node;
     }
 
-    public G_Node getDirectNode(){
-        if(last != null){
-            if(last.last == null){
+    public G_Node getDirectNode() {
+        if (last != null) {
+            if (last.last == null) {
                 return last.node;
             }
-        }else{
+        } else {
             System.err.println("What is this fking error ?, how could that be possible. I cannot accept this!");
             return node;
         }
         return last.getDirectNode();
     }
 
-    public boolean hasBeen(G_Node node){
-        if(last == null)
+    public boolean hasBeen(G_Node node) {
+        if (last == null)
             return this.node.equals(node);
         return last.hasBeen(node) || this.node.equals(node);
     }
