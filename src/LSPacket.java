@@ -76,13 +76,15 @@ public class LSPacket {
 
     }
 
-    public LSPacket(String advertisingRouter ,boolean isHeartbeat,int seq,int ages, G_Edge... connections){
+    public LSPacket(String advertisingRouter ,boolean isHeartbeat,int seq,long ages, G_Edge... connections){
         this.seq = seq;
         this.age = System.currentTimeMillis() + ages;
         this.flags[0] = isHeartbeat;
         this.advertisingRouter = advertisingRouter;
-        for(G_Edge edge : connections){
-            addConnectionData(edge);
+        if(!isHeartbeat) {
+            for (G_Edge edge : connections) {
+                addConnectionData(edge);
+            }
         }
     }
 

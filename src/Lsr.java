@@ -1,5 +1,3 @@
-import com.sun.javafx.geom.Edge;
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -67,7 +65,7 @@ public class Lsr {
      * @param port the port current router listen on
      * @param neighbourList the neighbours list
      */
-    public Lsr(String id, int port, List<Neighbour> neighbourList){
+    public Lsr(String id, int port, final List<Neighbour> neighbourList){
         this.neighbours = neighbourList;
         this.id = id;
         this.port = port;
@@ -75,6 +73,11 @@ public class Lsr {
         forwardTable = new ConcurrentHashMap<G_Node,G_Edge>();
         packetCache = new ConcurrentHashMap<G_Node, LSPacket>();
         graph.add(id);
+        for(Neighbour neighbour : neighbourList){
+            graph.add(neighbour.getId());
+            graph.connect(graph.getNode(neighbour.getId(),false),graph.getNode(id,false),neighbour.getCost());
+        }
+
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -88,7 +91,11 @@ public class Lsr {
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                sendPacket();
+                try {
+                    sendPacket(false);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 Iterator<Neighbour> neighbourIterator = neighbours.iterator();
                 while(neighbourIterator.hasNext()){
                     Neighbour neighbour = neighbourIterator.next();
@@ -99,11 +106,48 @@ public class Lsr {
                 }
             }
         },0,UPDATE_INTERVAL);
+
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    sendPacket(true);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                for (Neighbour neighbour : neighbourList){
+                    if(!neighbour.isAlive()){
+                        System.err.println("beat failed.");
+                    }
+                }
+            }
+        },0,20);
     }
 
-    private void sendPacket(){
-
+    /**
+     *
+     * @param heartbeats if it is a heartbeats packet
+     * @throws IOException
+     */
+    private void sendPacket(boolean heartbeats) throws IOException {
+        LSPacket lsPacket = null;
+        if(heartbeats){
+            lsPacket = new LSPacket(id
+                    , heartbeats
+                    , seq++
+                    , System.currentTimeMillis() + TTL_KEEPALIVE
+                    , null);
+        }else {
+            List<G_Edge> temp = graph.getAllConnections(id);
+            lsPacket = new LSPacket(id
+                    , heartbeats
+                    , seq++
+                    , System.currentTimeMillis() + TTL_LSP
+                    , temp.toArray(new G_Edge[temp.size()]));
+        }
+        forwardPacket(lsPacket,null);
     }
+
 
     /**
      *  Starting listening , will block the thread.
@@ -232,7 +276,7 @@ public class Lsr {
         byte[] bytes = packet.toBytes();
         DatagramPacket send = new DatagramPacket(bytes,bytes.length);
         for(Neighbour neighbour : neighbours){
-            if(neighbour.equals(duplicated))
+            if(duplicated != null && neighbour.equals(duplicated))
                 continue;
             send.setAddress(InetAddress.getLocalHost());
             send.setPort(neighbour.getPort());
@@ -241,20 +285,10 @@ public class Lsr {
     }
 
 
-    /**
-     *
-     * @param port the neighbour port
-     * @return the neighbour
-     */
-    public Neighbour getNeighbourByPort(int port){
-        for(Neighbour neighbour : neighbours) {
-            if(neighbour.getPort() == port)
-                return neighbour;
-        }
-        System.err.println("CROSS ROUTER MESSAGE, HOW COULD IT BE POSSIBLE. YOU LIED TO ME!!!");
-        return null;
-    }
 
+    /**
+     * update router, run shortest paths
+     */
     public void updateRouter(){
         List<G_SearchingNode> searchingNodes = new ArrayList<G_SearchingNode>();
         for(G_Node node : graph.getAllNodes()){
@@ -308,6 +342,21 @@ public class Lsr {
         }
         throw new Exception("May have no connections!");
 
+    }
+
+
+    /**
+     *
+     * @param port the neighbour port
+     * @return the neighbour
+     */
+    public Neighbour getNeighbourByPort(int port){
+        for(Neighbour neighbour : neighbours) {
+            if(neighbour.getPort() == port)
+                return neighbour;
+        }
+        System.err.println("CROSS ROUTER MESSAGE, HOW COULD IT BE POSSIBLE. YOU LIED TO ME!!!");
+        return null;
     }
 
 

@@ -1,4 +1,3 @@
-import java.util.Objects;
 
 /**
  * Created by matthew on 8/10/16.
@@ -13,7 +12,7 @@ public class Neighbour {
     private final int cost;
     private final int port;
 
-    private long lastAlive = 0;
+    private boolean beat = false;
     private byte cumulativeMiss = 0;
 
     public Neighbour(String id, int cost, int port){
@@ -23,12 +22,25 @@ public class Neighbour {
     }
 
     public void heartbeat(){
-        lastAlive = System.currentTimeMillis();
+        beat = true;
         cumulativeMiss = 0;
     }
 
     public boolean isDead(){
         return cumulativeMiss > 3;
+    }
+
+    /**
+     *
+     * @return true if received heart beats in the interval, false if not
+     */
+    public boolean isAlive(){
+        boolean returnValue = beat;
+        if(!beat){
+            cumulativeMiss ++;
+        }
+        beat = false;
+        return returnValue;
     }
 
     public String getId() {
