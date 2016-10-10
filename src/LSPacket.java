@@ -1,9 +1,6 @@
-import com.sun.org.apache.bcel.internal.generic.GETFIELD;
-import com.sun.org.apache.xml.internal.security.algorithms.implementations.IntegrityHmac;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.nio.ByteBuffer;
+import java.util.*;
 
 /**
  * Created by matthew on 8/10/16.
@@ -15,98 +12,204 @@ public class LSPacket {
 
 
     /*
-      packet design
-      --- general header ---
+      The LS packet design
 
-      0  byte ---  sender id  ---
-      1  byte ---  |R|R|R|R|R|R|R|k
-         K : keep alive, true if it is a heartbeat packet
-         R : Reserved
-      2  ages --- the age of current in seconds
+                          ------------------ Packet header ------------------ 26 bytes
 
-      --- data seg ---
-      3 id of NodeFrom
-      4-7 int the cost
-      repeat....
+                  0-15  bytes --- long   ---  the age
+                  16    byte  --- String ---  advertising router id  ---
+                  17    byte  ---  |R|R|R|R|R|R|R|k
+                       K : keep alive, true if it is a heartbeat packet
+                       R : Reserved
+                  18-21 bytes --- int    ---  Seq number , that's the "version" of this packet.
+                  22-25 bytes --- int    ---  the actual data segment length, HEADER EXCLUDED
+
+                          ------------------ data seg ------------------
+                  {
+                    26    byte  --- String  ---  id of Neighbour
+                    27-30 bytes --- int     ---  the cost from advertising router to the router above
+                  }* total bytes 5 bytes
+                  ( n segments of this type of data, where n <= 0) , data seg maybe empty if
 
      */
 
 
-    private String senderID;
+    //attributes of this packet, included in packet header
+    private String advertisingRouter;
     private boolean[] flags = new boolean[4];
-    //private List<G_Edge> connections = new ArrayList<G_Edge>();
-    private HashMap<G_Node,Integer> connections = new HashMap<G_Node,Integer>();
-    private byte age = 0;
+    private long age = 0;
+    private int seq = -1;
 
-    private static int TTL = 0;
+
+    //data segment
+    private HashMap<G_Node,Integer> connections = new HashMap<G_Node,Integer>();
+    private byte[] data  = null;
+
+    // dynamic wrapper stuff
+    private boolean expired = true;
+
+    //static constants
+    private final static int HEADER_LENGTH = 26;
+
 
     /**
      *
-     * @param data the receiving data
+     * construct basic packet information.
+     * not fully un-packed the data seg as long as the (method unpack) in called.
+     * @param packet the receiving data
      */
-    public LSPacket(byte[] data){
-        senderID = Byte.toString(data[0]);
+    public LSPacket(byte[] packet){
+        age =  (long) PacketUtils.get4BytesInt(packet,0) << 32*3
+                | PacketUtils.get4BytesInt(packet,4) << 32*2
+                | PacketUtils.get4BytesInt(packet,8) << 32
+                | PacketUtils.get4BytesInt(packet,12);
+        expired = System.currentTimeMillis() <= age;
+
+        advertisingRouter = Byte.toString(packet[16]);
         //bits to booleans, load flags
         for (int i = 0; i < 8; i++)
-            flags[i] = (data[1] & (0b00000001 << i)) != 0;
-        age = data[2];
+            flags[i] = (packet[17] & (0b00000001 << i)) != 0;
 
-        for(int i = 3 ; i < data.length ; i+=5){
-            G_Edge edge = new G_Edge(
-                    new G_Node(Byte.toString(data[i])),
-                    new G_Node(Byte.toString(data[i+1])),
-                    PacketUtils.get4BytesInt(data,i+2)
-            );
-            connections.add(edge);
-        }
+        seq = PacketUtils.get4BytesInt(packet,18);
+
+        data = Arrays.copyOfRange(packet,HEADER_LENGTH,PacketUtils.get4BytesInt(packet,22));
 
     }
 
-
-
-    /**
-     *
-     * @param senderID the sender ID
-     * @param isHeartbeat is this packet heartbeat
-     * @param connections all connections to send (mindist)
-     */
-    public LSPacket(String senderID , boolean isHeartbeat , G_Edge... connections){
+    public LSPacket(String advertisingRouter ,boolean isHeartbeat,int seq,int ages, G_Edge... connections){
+        this.seq = seq;
+        this.age = System.currentTimeMillis() + ages;
         this.flags[0] = isHeartbeat;
-        this.senderID = senderID;
+        this.advertisingRouter = advertisingRouter;
         for(G_Edge edge : connections){
             addConnectionData(edge);
         }
     }
 
-    public String getSenderID(){
-        return senderID;
+    /**
+     *  to unpack the packet
+     *  @precondition !expired, !empty , seq may > current cache seq
+     */
+    public void unpack(G_Graph graph){
+        if(data.length %5 != 0){
+            System.err.println("packet error ?");
+        }
+        for(int i = 0 ; i < data.length ; i+=5){
+            connections.put(graph.getNode(Byte.toString(data[0]),true),PacketUtils.get4BytesInt(data,i+1));
+            if(Lsr.DEBUG){
+                System.err.println("packet " + graph.getNode(Byte.toString(data[0]),false) + " cost: " + PacketUtils.get4BytesInt(data,i+1) );
+            }
+        }
+
     }
 
+    /**
+     *  packet the readable G_Node hash map to bytes array
+     *  should be called before toBytes but I did check there anyway.
+     *  direct buffer was used, hope no memory leak anyway.
+     */
+    public void pack(){
+        ByteBuffer buffer = ByteBuffer.allocate(connections.size() * 5) ;
+        for(G_Node node : connections.keySet()){
+            buffer.put((byte)node.getId().charAt(0));
+            PacketUtils.fill4BytesToBuffer(connections.get(node),buffer);
+        }
+        buffer.flip();
+        data = buffer.array();
+        buffer.clear();
+    }
+
+
+    /**
+     *
+     * @return the advertaising router
+     */
+    public String getAdvertisingRouter(){
+        return advertisingRouter;
+    }
+
+    /**
+     *
+     * @return is heartbeat packet
+     */
     public boolean isHeartbeat(){
         return flags[0];
     }
 
-
-    public void addConnectionData(G_Node current, G_Node node2, int cost){
-        if(connections == null){
-            connections = new ArrayList<G_Edge>();
-        }
-        G_Edge edge = new G_Edge(node1,node2,cost);
-        connections.add(edge);
+    /**
+     *
+     * @param f true if heartbeat
+     */
+    public void setHeartbeat(boolean f){
+        flags[0] = f;
     }
 
-    public void addConnectionData(G_Edge edge){
-        addConnectionData(edge.getNodes()[0],edge.getNodes()[1],edge.getCost());
+    public int getLength(){
+        return connections.size() * 5;
+    }
+
+    public int getSeq(){
+        return seq;
+    }
+
+    public int getCost(G_Node node){
+        return connections.containsKey(node) ? connections.get(node) : -1;
+    }
+
+    public Set<G_Node> getConnectedNodes(){
+        return connections.keySet();
+    }
+
+
+    /**
+     *
+     * @param neighbour the neighbour of the advertising router
+     * @param cost the cost
+     */
+    public void addConnectionData(G_Node neighbour, int cost){
+        if(connections == null){
+            connections = new HashMap<G_Node,Integer>();
+        }
+        connections.put(neighbour,cost);
     }
 
     /**
-     *  //TODO  finish this asap
+     *  the method to use to add for current LSR .
+     *  advertising nodes must be one node of this edge
+     * @param edge the edge
+     */
+
+    public void addConnectionData(G_Edge edge){
+        G_Node theOne = edge.getNodes()[0].getId().equals(advertisingRouter)
+                ? edge.getNodes()[1]
+                : edge.getNodes()[0];
+        addConnectionData(theOne,edge.getCost());
+    }
+
+    public boolean isExpired(){
+        return expired;
+    }
+
+
+
+    /**
+     *
      * @return the bytes of this packet
      */
     public byte[] toBytes(){
-        List<Byte> byteList = new ArrayList<Byte>();
+        if(data == null)
+            pack();
+
+        byte[] packet = new byte[HEADER_LENGTH + data.length];
+        //long to bytes array, so bad to do so.
+        PacketUtils.fill4BytesFromInt( (int) age>>12,packet,0);
+        PacketUtils.fill4BytesFromInt( (int) age>>8,packet,4);
+        PacketUtils.fill4BytesFromInt( (int) age>>4,packet,8);
+        PacketUtils.fill4BytesFromInt( (int) age>>0,packet,12);
+
+
         // id part
-        byteList.add((byte)senderID.charAt(0));
+        packet[16] = (byte) advertisingRouter.charAt(0);
         byte flagsRep = 0;
         for (int i = 0; i < 8; i++) {
             if (!flags[i]) {
@@ -114,18 +217,11 @@ public class LSPacket {
             }
             flagsRep = (byte) (flagsRep | (0b00000001 << i));
         }
-        byteList.add(flagsRep);
-
-        byteList.add(age);
-
-        for(G_Edge edge : connections){
-            byteList.add(edge.get)
-        }
-
-        byte[] returnValue = new byte[byteList.size()];
-        for(int i = 0 ; i < byteList.size() ; i ++)
-            returnValue[i] = byteList.get(i);
-        return returnValue;
+        packet[17] = flagsRep;
+        PacketUtils.fill4BytesFromInt(seq,packet,18);
+        PacketUtils.fill4BytesFromInt(data.length,packet,22);
+        System.arraycopy(data , 0 ,packet , HEADER_LENGTH - 1 , data.length);
+        return packet;
     }
 
 }

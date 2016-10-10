@@ -12,8 +12,8 @@ public class G_Graph {
 
 
     public G_Graph(){
-        nodes = new ArrayList<>();
-        edges = new HashSet<>();
+        nodes = Collections.synchronizedList(new ArrayList<G_Node>());
+        edges = Collections.synchronizedSet(new HashSet<G_Edge>());
     }
 
     public G_Edge connect(G_Node nodeA, G_Node nodeB, int cost){
@@ -24,7 +24,6 @@ public class G_Graph {
 
         edges.add(edge);
         return edge;
-
     }
 
     public List<G_Node> getAllNodes(){
@@ -40,7 +39,7 @@ public class G_Graph {
         return false;
     }
 
-    public synchronized G_Node add(String id) {
+    public G_Node add(String id) {
         G_Node node = new G_Node(id);
         this.nodes.add(node);
         return node;
@@ -91,17 +90,18 @@ public class G_Graph {
     }
 
     public List<G_Edge> getAllConnections(String id){
-        G_Node node = getNode(id);
+        G_Node node = getNode(id,false);
         return getAllConnections(node);
     }
 
-    public G_Node getNode(String id){
+    public G_Node getNode(String id,boolean createNew){
         for(G_Node node : this.nodes){
             if(node.getId().equals(id)){
                 return node;
             }
         }
-        return null;
+
+        return createNew ? add(id) : null;
     }
 
 

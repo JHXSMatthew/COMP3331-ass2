@@ -1,3 +1,5 @@
+import java.nio.ByteBuffer;
+
 /**
  * Created by Matthew on 5/09/2016
  * some help method for packets.
@@ -14,5 +16,12 @@ public class PacketUtils {
         data[offset + 1] = (byte) (i >> 16);
         data[offset + 2] = (byte) (i >> 8);
         data[offset + 3] = (byte) (i >> 0);
+    }
+
+    public static void fill4BytesToBuffer(int i , ByteBuffer buffer){
+        buffer.put((byte)(i >> 24));
+        buffer.put((byte)(i >> 16));
+        buffer.put((byte)(i >> 8));
+        buffer.put((byte)(i >> 0));
     }
 }

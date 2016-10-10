@@ -17,10 +17,10 @@ public class G_Edge {
 
     /**
      *
-     * @return the copy of nodes holding.
+     * @return the array holding, original.
      */
     public G_Node[] getNodes(){
-        return Arrays.copyOf(connected,2);
+        return connected;
     }
 
     public G_Node getTheOtherNode(G_Node node){
@@ -32,6 +32,10 @@ public class G_Edge {
 
     public int getCost(){
         return cost;
+    }
+
+    public void setCost(int c){
+        this.cost = c;
     }
 
     public boolean isEdge(G_Node... node ){
