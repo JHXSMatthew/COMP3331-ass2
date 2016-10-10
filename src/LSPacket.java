@@ -12,8 +12,6 @@ public class LSPacket {
 
 
     /*
-      The LS packet design
-
                           ------------------ Packet header ------------------ 26 bytes
 
                   0-15  bytes --- long   ---  the age
@@ -65,14 +63,20 @@ public class LSPacket {
                 | PacketUtils.get4BytesInt(packet,12);
         expired = System.currentTimeMillis() <= age;
 
-        advertisingRouter = Byte.toString(packet[16]);
+        advertisingRouter = new String(Arrays.copyOfRange(packet,16,17));
         //bits to booleans, load flags
         for (int i = 0; i < 8; i++)
             flags[i] = (packet[17] & (0b00000001 << i)) != 0;
 
         seq = PacketUtils.get4BytesInt(packet,18);
+        int length  = PacketUtils.get4BytesInt(packet,22);
+        if(!isHeartbeat()){
+            data = new byte[length];
+            for(int i = 0 ; i < data.length ; i ++){
+                data[i] = packet[i + HEADER_LENGTH];
+            }
 
-        data = Arrays.copyOfRange(packet,HEADER_LENGTH,PacketUtils.get4BytesInt(packet,22));
+        }
 
     }
 
@@ -94,13 +98,11 @@ public class LSPacket {
      */
     public void unpack(G_Graph graph){
         if(data.length %5 != 0){
-            System.err.println("packet error ?");
+            System.err.println("packet error ? DL=" + data.length + " from " + getAdvertisingRouter());
         }
         for(int i = 0 ; i < data.length ; i+=5){
-            connections.put(graph.getNode(Byte.toString(data[0]),true),PacketUtils.get4BytesInt(data,i+1));
-            if(Lsr.DEBUG){
-                System.err.println("packet " + graph.getNode(Byte.toString(data[0]),false) + " cost: " + PacketUtils.get4BytesInt(data,i+1) );
-            }
+            String id = new String(Arrays.copyOfRange(data,i,i+1));
+            connections.put(graph.getNode(id,true),PacketUtils.get4BytesInt(data,i+1));
         }
 
     }
@@ -162,6 +164,13 @@ public class LSPacket {
         return connections.keySet();
     }
 
+    public long getAge(){
+        return age;
+    }
+
+    public String getPrintableName(){
+        return "id :" + this.getAdvertisingRouter();
+    }
 
     /**
      *
@@ -189,9 +198,8 @@ public class LSPacket {
     }
 
     public boolean isExpired(){
-        return expired;
+        return false; //TODO: confirm this when finish most of features
     }
-
 
 
     /**
@@ -212,6 +220,7 @@ public class LSPacket {
 
         byte[] packet = new byte[length];
         //long to bytes array, so bad to do so.
+
         PacketUtils.fill4BytesFromInt( (int) age>>12,packet,0);
         PacketUtils.fill4BytesFromInt( (int) age>>8,packet,4);
         PacketUtils.fill4BytesFromInt( (int) age>>4,packet,8);
@@ -229,9 +238,13 @@ public class LSPacket {
         }
         packet[17] = flagsRep;
         PacketUtils.fill4BytesFromInt(seq,packet,18);
-        PacketUtils.fill4BytesFromInt(data.length,packet,22);
         if(!isHeartbeat()) {
-            System.arraycopy(data, 0, packet, HEADER_LENGTH - 1, data.length);
+            PacketUtils.fill4BytesFromInt(data.length,packet,22);
+            for(int i = HEADER_LENGTH ; i < data.length + HEADER_LENGTH ; i ++)
+                packet[i] = data[i-HEADER_LENGTH];
+            //System.arraycopy(data, 0, packet, HEADER_LENGTH , data.length);
+        }else{
+            PacketUtils.fill4BytesFromInt(0,packet,22);
         }
         return packet;
     }

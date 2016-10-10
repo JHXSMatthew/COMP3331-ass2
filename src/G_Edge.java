@@ -25,9 +25,9 @@ public class G_Edge {
 
     public G_Node getTheOtherNode(G_Node node){
         if(connected[0] == node){
-            return node;
+            return connected[1];
         }
-        return connected[1];
+        return connected[0];
     }
 
     public int getCost(){
@@ -61,5 +61,10 @@ public class G_Edge {
         }else{
             return false;
         }
+    }
+
+    @Override
+    public String toString(){
+        return "[" + getNodes()[0].getId()  + "<->" + getNodes()[1].getId() + "] " ;
     }
 }

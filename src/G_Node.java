@@ -23,4 +23,9 @@ public class G_Node {
             return false;
         }
     }
+
+    @Override
+    public String toString(){
+        return getId() + " ";
+    }
 }

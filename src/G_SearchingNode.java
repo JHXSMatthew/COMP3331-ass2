@@ -54,6 +54,12 @@ public class G_SearchingNode implements Comparable<G_SearchingNode>{
         return last.getDirectNode();
     }
 
+    public boolean hasBeen(G_Node node){
+        if(last == null)
+            return this.node.equals(node);
+        return last.hasBeen(node) || this.node.equals(node);
+    }
+
     @Override
     public int compareTo(G_SearchingNode o) {
         return cost - o.cost;

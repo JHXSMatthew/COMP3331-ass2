@@ -7,7 +7,6 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by matthew on 8/10/16.
@@ -15,7 +14,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class Lsr {
 
-    public static final boolean DEBUG = true;
+
 
     public static void main(String[] args) throws FileNotFoundException {
         Scanner scanner = new Scanner(new File(args[2]));
@@ -49,6 +48,7 @@ public class Lsr {
     private DatagramSocket socket;
     private List<Neighbour> neighbours;
     private boolean updateRouter = true;
+    private boolean listen = false;
     private Timer timer;
 
     //the graph that stores all information related to current network topology
@@ -57,10 +57,13 @@ public class Lsr {
     private ConcurrentHashMap<G_Node,LSPacket> packetCache = null;
 
     //some static constants , in ms
+    private final static int KEEP_ALIVE_INTERVAL = 25;
     private final static int UPDATE_INTERVAL = 1000;
     private final static int ROUTE_UPDATE_INTERVAL = 30000;
-    private final static int TTL_KEEPALIVE = 200;
+    private final static int TTL_KEEP_ALIVE = 200;
     private final static int TTL_LSP = 2000;
+    public static final boolean DEBUG = false;
+
 
     /**
      *
@@ -75,59 +78,81 @@ public class Lsr {
         graph = new G_Graph();
         forwardTable = new ConcurrentHashMap<G_Node,G_Edge>();
         packetCache = new ConcurrentHashMap<G_Node, LSPacket>();
-        graph.add(id);
+
         for(Neighbour neighbour : neighbourList){
-            graph.add(neighbour.getId());
-            graph.connect(graph.getNode(neighbour.getId(),false),graph.getNode(id,false),neighbour.getCost());
+            graph.connect(graph.getNode(neighbour.getId(),true),graph.getNode(id,true),neighbour.getCost());
         }
+        //graph.print();
 
         timer = new Timer();
 
         timer.schedule(new TimerTask() {
+            int count = 1;
             @Override
             public void run() {
-                if(updateRouter){
-                    updateRouter();
+                if(!listen) {
+                    return;
+                }else{
+                    count ++;
                 }
-            }
-        },0,ROUTE_UPDATE_INTERVAL);
-
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    sendPacket(false);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                Iterator<Neighbour> neighbourIterator = neighbours.iterator();
-                while(neighbourIterator.hasNext()){
-                    Neighbour neighbour = neighbourIterator.next();
-                    if(neighbour.isDead()){
-                        neighbourIterator.remove();
-                        System.out.println("Neighbour"+ neighbour.getId() + "dead, RIP");
+                //keep alive stuff
+                if(count % KEEP_ALIVE_INTERVAL == 0){
+                    try {
+                        sendPacket(true);
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
                 }
-            }
-        },0,UPDATE_INTERVAL);
 
-
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                System.out.println("time?");
-                try {
-                    sendPacket(true);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                for (Neighbour neighbour : neighbours){
-                    if(!neighbour.isAlive()){
-                        System.err.println("beat failed.");
+                // node failed test , set it to, max delay of detecting node failure is 3x100ms = 300ms
+                if(count % 100 == 0){
+                    synchronized (neighbours) {
+                        for (Neighbour neighbour : neighbours){
+                            if(!neighbour.isAlive()){
+                                //System.err.println("Node " + neighbour.getId() + " beat failed.");
+                            }
+                      }
                     }
                 }
+                // per second LS packet sending
+                if(count % UPDATE_INTERVAL == 0){
+                    graph.print();
+
+                    try {
+                        sendPacket(false);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    synchronized (neighbours) {
+                        Iterator<Neighbour> neighbourIterator = neighbours.iterator();
+                        while (neighbourIterator.hasNext()) {
+                            Neighbour neighbour = neighbourIterator.next();
+                            if (neighbour.isDead()) {
+                                neighbourIterator.remove();
+                                graph.remove(neighbour.getId());
+                                System.err.println("Neighbour" + neighbour.getId() + "dead, RIP");
+                            }
+                        }
+                    }
+                    if(neighbours.isEmpty()){
+                        System.err.println("Why I am still alive, all my neighbours died. I choose to die");
+                        if(DEBUG){
+                            System.exit(-1);
+                        }
+                    }
+                }
+
+                //shortest oath
+                if(count == ROUTE_UPDATE_INTERVAL){
+                    if(updateRouter){
+                        updateRouter();
+                    }
+                    count = 0;
+                }
+
             }
-        },0,20);
+        },0,1);
+
         System.out.println("Start up,  listen on " + port + " router ID " + id + " nighbours " + neighbours.size() );
         listen();
     }
@@ -142,8 +167,8 @@ public class Lsr {
         if(heartbeats){
             lsPacket = new LSPacket(id
                     , heartbeats
-                    , seq++
-                    , System.currentTimeMillis() + TTL_KEEPALIVE
+                    , seq
+                    , System.currentTimeMillis() + TTL_KEEP_ALIVE
                     , (G_Edge) null);
         }else {
             List<G_Edge> temp = graph.getAllConnections(id);
@@ -153,7 +178,7 @@ public class Lsr {
                     , System.currentTimeMillis() + TTL_LSP
                     , temp.toArray(new G_Edge[temp.size()]));
         }
-        forwardPacket(lsPacket,null);
+        forwardPacket(lsPacket,(Neighbour) null);
     }
 
 
@@ -170,6 +195,7 @@ public class Lsr {
                 e.printStackTrace();
             }
         }
+        listen = true;
 
         while(true){
             DatagramPacket packet = new DatagramPacket(new byte[1024],1024);
@@ -180,10 +206,10 @@ public class Lsr {
                 e.printStackTrace();
             }
             LSPacket lsPacket = new LSPacket(packet.getData());
-            System.out.println("packet received!");
-            System.out.println("packet Error!");
+            //System.out.println("packet received!");
 
             if(lsPacket.isExpired()){
+                System.out.println("Expired packet! " + lsPacket.getAge() + "vs" + System.currentTimeMillis());
                 continue;
             }
             Neighbour neighbour = getNeighbourByPort(packet.getPort());
@@ -203,8 +229,9 @@ public class Lsr {
      * @param sender the sender
      */
     private void onHeartbeatsReceived(LSPacket packet,Neighbour sender){
-        //TODO: finish this after basic broadcast working
-        //oh, I am dead
+        if(sender == null){
+            return;
+        }
         sender.heartbeat();
     }
 
@@ -226,7 +253,12 @@ public class Lsr {
                 //old packet received, do nothing.
                 return;
             }
+        }else{
+            packetCache.put(advertiser,packet);
         }
+
+        //time to unpack
+        packet.unpack(graph);
 
         //update graph database
         //fill edges and update costs if necessary
@@ -251,8 +283,9 @@ public class Lsr {
         //remove all disconnected nodes.
         List<String> pendingRemove = new ArrayList<String>();
         for(G_Edge edge : allC_E){
-            if(!packet.getConnectedNodes().contains(edge.getTheOtherNode(advertiser)))
+            if(!packet.getConnectedNodes().contains(edge.getTheOtherNode(advertiser))) {
                 pendingRemove.add(edge.getTheOtherNode(advertiser).getId());
+            }
         }
         for(String s : pendingRemove){
             graph.remove(s);
@@ -260,8 +293,14 @@ public class Lsr {
         }
 
         //then forward this packet to my neighbour as a gift, hope they love it :)
+
         try {
-            forwardPacket(packet,sender);
+            Neighbour advertisingNeighbour = getNeighbourById(advertiser.getId());
+            if(advertisingNeighbour == null){
+                forwardPacket(packet,sender);
+            }else {
+                forwardPacket(packet, sender, advertisingNeighbour);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -283,16 +322,37 @@ public class Lsr {
      * @param duplicated the sender of this packet (one of my neighbour)
      * @throws IOException exception if there is something wrong with UDP stuff
      */
-    public void forwardPacket(LSPacket packet,Neighbour duplicated) throws IOException {
+    public void forwardPacket(LSPacket packet,Neighbour... duplicated) throws IOException {
         byte[] bytes = packet.toBytes();
-        DatagramPacket send = new DatagramPacket(bytes,bytes.length);
-        for(Neighbour neighbour : neighbours){
-            if(duplicated != null && neighbour.equals(duplicated))
-                continue;
-            System.out.println("sending packets to "+ neighbour.getId() + " " + neighbour.getPort() );
-            send.setAddress(InetAddress.getByName("127.0.0.1"));
-            send.setPort(neighbour.getPort());
-            socket.send(send);
+        DatagramPacket send = new DatagramPacket(bytes, bytes.length);
+        synchronized(neighbours) {
+            for (Neighbour neighbour : neighbours) {
+                if(duplicated != null){
+                    boolean skip = false;
+                    for(Neighbour temp : duplicated){
+                        if(temp == null){
+                            continue;
+                        }
+                        if(temp.equals(neighbour)){
+                            skip = true;
+                        }
+                    }
+                    if(skip)
+                        continue;
+                }
+                if(DEBUG && !packet.isHeartbeat()){
+                    StringBuilder builder = new StringBuilder();
+                    builder.append("sending packets to " ).append(neighbour.getId()).append(" ").append(+ neighbour.getPort()).append(" heartbeat= ").append(packet.isHeartbeat()).append(" seq= ").append(packet.getSeq());
+                    String str = builder.toString();
+                    if(!packet.getAdvertisingRouter().equals(id)){
+                        str += " forward from " + packet.getPrintableName();
+                    }
+                    System.err.println(str );
+                }
+                send.setAddress(InetAddress.getByName("127.0.0.1"));
+                send.setPort(neighbour.getPort());
+                socket.send(send);
+            }
         }
     }
 
@@ -303,11 +363,12 @@ public class Lsr {
      */
     public void updateRouter(){
         List<G_SearchingNode> searchingNodes = new ArrayList<G_SearchingNode>();
-        for(G_Node node : graph.getAllNodes()){
+        //graph.print();
+        List<G_Node> allNodes = graph.getAllNodes();
+        for(G_Node node : allNodes){
             if(node.getId().equals(id)){
                 continue;
             }
-
             try {
                 G_SearchingNode searchingNode =  getShortestPath(graph.getNode(id,false),node);
                 searchingNodes.add(searchingNode);
@@ -345,15 +406,17 @@ public class Lsr {
             }
             List<G_Edge> connections = graph.getAllConnections(current.getNode());
             for(G_Edge edge : connections){
-                G_SearchingNode next = new G_SearchingNode(
-                        edge.getTheOtherNode(current.getNode()),
-                        current,
-                        edge.getCost());
-                queue.add(next);
+                if(!current.hasBeen(edge.getTheOtherNode(current.getNode()))){
+                    G_SearchingNode next = new G_SearchingNode(
+                            edge.getTheOtherNode(current.getNode()),
+                            current,
+                            edge.getCost());
+                    queue.add(next);
+                }
             }
 
         }
-        throw new Exception("May have no connections!");
+        throw new Exception("May have no connections! from " + starting.getId() + " to " + end.getId());
 
     }
 
@@ -364,11 +427,29 @@ public class Lsr {
      * @return the neighbour
      */
     public Neighbour getNeighbourByPort(int port){
-        for(Neighbour neighbour : neighbours) {
-            if(neighbour.getPort() == port)
-                return neighbour;
+        synchronized (neighbours) {
+            for (Neighbour neighbour : neighbours) {
+                if (neighbour.getPort() == port)
+                    return neighbour;
+            }
         }
-        System.err.println("CROSS ROUTER MESSAGE, HOW COULD IT BE POSSIBLE. YOU LIED TO ME!!!");
+        System.err.println("ERROR, possible reason , offline router goes to online again, or configs error!");
+        return null;
+    }
+
+
+    /**
+     *
+     * @param id the id of neighbour trying to get
+     * @return the neighbour object
+     */
+    public Neighbour getNeighbourById(String id){
+        synchronized (neighbours) {
+            for (Neighbour neighbour : neighbours) {
+                if (neighbour.equals(id))
+                    return neighbour;
+            }
+        }
         return null;
     }
 

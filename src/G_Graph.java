@@ -62,6 +62,7 @@ public class G_Graph {
             G_Node n = iterator.next();
             if(n.getId().equals(id)){
                 node = n;
+                iterator.remove();
                 break;
             }
         }
@@ -102,6 +103,25 @@ public class G_Graph {
         }
 
         return createNew ? add(id) : null;
+    }
+
+    public void print(){
+        if(!Lsr.DEBUG){
+            return;
+        }
+        System.err.println("Graph detail");
+        System.err.println("Nodes:" + nodes.size());
+        System.err.print("    ");
+        for(G_Node n : nodes){
+            System.err.print(n.toString());
+        }
+        System.err.println();
+        System.err.println("Edges: " + edges.size());
+        System.err.print("    ");
+        for(G_Edge n : edges){
+            System.err.print(n.toString());
+        }
+        System.err.println();
     }
 
 
