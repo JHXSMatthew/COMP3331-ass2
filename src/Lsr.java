@@ -11,9 +11,10 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Created by matthew on 8/10/16.
  * The main router class.
+ * //TODO 1. float cost 2. remove fking time stuff
+ *
  */
 public class Lsr {
-
 
     public static final boolean DEBUG = false;
     //some static constants , in ms
