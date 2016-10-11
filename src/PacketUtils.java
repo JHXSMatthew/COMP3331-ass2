@@ -27,16 +27,16 @@ public class PacketUtils {
 
 
     public static void fill4BytesFloatToBuffer(float i, ByteBuffer buffer) {
-        fill4BytesIntToBuffer(Float.floatToIntBits(i),buffer);
+        fill4BytesIntToBuffer(Float.floatToIntBits(i), buffer);
     }
 
 
-    public static float get4ByteFloat(byte[] data , int offset){
-        return Float.intBitsToFloat(get4BytesInt(data,offset));
+    public static float get4ByteFloat(byte[] data, int offset) {
+        return Float.intBitsToFloat(get4BytesInt(data, offset));
     }
 
-    public static void fill4BytesFloat(float f, byte[] data, int offset){
+    public static void fill4BytesFloat(float f, byte[] data, int offset) {
         int floatBytes = Float.floatToIntBits(f);
-        fill4BytesFromInt(floatBytes,data,offset);
+        fill4BytesFromInt(floatBytes, data, offset);
     }
 }

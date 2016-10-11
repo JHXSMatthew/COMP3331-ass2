@@ -1,5 +1,4 @@
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Set;
 
@@ -56,7 +55,7 @@ public class LSPacket {
                 | PacketUtils.get4BytesInt(packet, 12);*/
         //expired = System.currentTimeMillis() <= age;
 
-        advertisingRouter = Character.toString((char)packet[0]);
+        advertisingRouter = Character.toString((char) packet[0]);
         //bits to booleans, load flags
         for (int i = 0; i < 8; i++)
             flags[i] = (packet[1] & (0b00000001 << i)) != 0;
@@ -94,7 +93,7 @@ public class LSPacket {
             System.err.println("packet error ? DL=" + data.length + " from " + getAdvertisingRouter());
         }
         for (int i = 0; i < data.length; i += 5) {
-            String id = Character.toString((char)data[i]);
+            String id = Character.toString((char) data[i]);
             connections.put(graph.getNode(id, true), PacketUtils.get4ByteFloat(data, i + 1));
         }
 

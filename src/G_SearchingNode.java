@@ -59,6 +59,6 @@ public class G_SearchingNode implements Comparable<G_SearchingNode> {
 
     @Override
     public int compareTo(G_SearchingNode o) {
-        return (int)(cost*10) - (int)(o.cost *10);
+        return (int) (cost * 10) - (int) (o.cost * 10);
     }
 }

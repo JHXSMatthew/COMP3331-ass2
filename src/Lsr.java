@@ -11,7 +11,6 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Created by matthew on 8/10/16.
  * The main router class.
- *
  */
 public class Lsr {
 
@@ -20,9 +19,9 @@ public class Lsr {
     private final static int KEEP_ALIVE_INTERVAL = 25;
     private final static int UPDATE_INTERVAL = 1000;
     private final static int ROUTE_UPDATE_INTERVAL = 30000;
-   /* private final static int TTL_KEEP_ALIVE = 200;
-    private final static int TTL_LSP = 2000;
-    */
+    /* private final static int TTL_KEEP_ALIVE = 200;
+     private final static int TTL_LSP = 2000;
+     */
     private final String id;
     private final int port;
     private int seq = 0;
@@ -35,6 +34,7 @@ public class Lsr {
     private G_Graph graph;
     private ConcurrentHashMap<G_Node, G_Edge> forwardTable = null;
     private ConcurrentHashMap<G_Node, LSPacket> packetCache = null;
+
     /**
      * @param id            the current router id
      * @param port          the port current router listen on

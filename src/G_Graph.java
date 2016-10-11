@@ -15,10 +15,9 @@ public class G_Graph {
     }
 
     /**
-     *
      * @param nodeA one node
      * @param nodeB the other node
-     * @param cost the cost to reach each other
+     * @param cost  the cost to reach each other
      * @return
      */
     public G_Edge connect(G_Node nodeA, G_Node nodeB, float cost) {
@@ -40,7 +39,6 @@ public class G_Graph {
     }
 
     /**
-     *
      * @param edge the edge to check
      * @return true if edge in the graph
      */
@@ -54,7 +52,6 @@ public class G_Graph {
     }
 
     /**
-     *
      * @param id the node to add
      * @return
      */
@@ -65,7 +62,6 @@ public class G_Graph {
     }
 
     /**
-     *
      * @param node1 one node
      * @param node2 the other
      * @return the edge
@@ -81,7 +77,6 @@ public class G_Graph {
     }
 
     /**
-     *
      * @param id the id of removal
      * @return
      */
@@ -108,7 +103,7 @@ public class G_Graph {
                 edges.remove(edge);
             }
         }
-        if(print){
+        if (print) {
             System.err.println("Neighbour " + id + " is Down");
         }
         return node;
