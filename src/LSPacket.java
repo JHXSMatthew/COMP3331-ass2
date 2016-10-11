@@ -88,7 +88,7 @@ public class LSPacket {
     /**
      * to unpack the packet
      *
-     * @Precondition !expired, !empty , seq may > current cache seq
+     * precondition !expired, !empty , seq may > current cache seq
      */
     public void unpack(G_Graph graph) {
         if (data.length % 5 != 0) {

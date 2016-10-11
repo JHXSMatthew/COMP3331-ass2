@@ -18,7 +18,7 @@ public class G_Graph {
      * @param nodeA one node
      * @param nodeB the other node
      * @param cost  the cost to reach each other
-     * @return the connectede Nodes
+     * @return the connected Nodes
      */
     public G_Edge connect(G_Node nodeA, G_Node nodeB, float cost) {
         G_Edge edge = new G_Edge(nodeA, nodeB, cost);
