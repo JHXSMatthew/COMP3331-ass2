@@ -277,7 +277,7 @@ public class Tester {
             StringBuilder builder = new StringBuilder();
             String s = null;
             int i = 0;
-            while((s = reader.readLine() ) != null || s.equals("")){
+            while((s = reader.readLine() ) != null){
                 if(s.contains("least-cost")) {
                     builder.append(s)
                             .append(System.lineSeparator());
