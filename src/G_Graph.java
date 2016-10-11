@@ -33,7 +33,7 @@ public class G_Graph {
     public List<G_Node> getAllNodes() {
         synchronized (this.nodes) {
             List<G_Node> copy = new ArrayList<G_Node>(); //copy to a new array prevent the concurrentModification exception.
-            nodes.addAll(this.nodes);
+            copy.addAll(this.nodes);
             return copy;
         }
     }
