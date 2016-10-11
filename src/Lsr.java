@@ -26,7 +26,7 @@ public class Lsr {
     private final int port;
     private int seq = 0;
     private DatagramSocket socket;
-    private List<Neighbour> neighbours;
+    private final List<Neighbour> neighbours;
     private boolean updateRouter = true;
     private boolean listen = false;
     private Timer timer;
@@ -78,9 +78,7 @@ public class Lsr {
                 if (count % 100 == 0) {
                     synchronized (neighbours) {
                         for (Neighbour neighbour : neighbours) {
-                            if (!neighbour.isAlive()) {
-                                //System.err.println("Node " + neighbour.getId() + " beat failed.");
-                            }
+                            neighbour.isNeighbourAlive();
                         }
                     }
                 }
@@ -145,25 +143,26 @@ public class Lsr {
             }
         }
 
-        Lsr r = new Lsr(args[0], Integer.parseInt(args[1]), neighbours);
+        new Lsr(args[0], Integer.parseInt(args[1]), neighbours);
 
     }
+
 
     /**
      * @param heartbeats if it is a heartbeats packet
      * @throws IOException
      */
     private void sendPacket(boolean heartbeats) throws IOException {
-        LSPacket lsPacket = null;
+        LSPacket lsPacket ;
         if (heartbeats) {
             lsPacket = new LSPacket(id
-                    , heartbeats
+                    , true
                     , seq
                     , (G_Edge) null);
         } else {
             List<G_Edge> temp = graph.getAllConnections(id);
             lsPacket = new LSPacket(id
-                    , heartbeats
+                    , false
                     , seq++
                     , temp.toArray(new G_Edge[temp.size()]));
         }
@@ -193,6 +192,7 @@ public class Lsr {
             } catch (IOException e) {
                 System.out.println("packet receive exception!");
                 e.printStackTrace();
+                System.exit(-1);
             }
             LSPacket lsPacket = new LSPacket(packet.getData());
 
@@ -329,12 +329,18 @@ public class Lsr {
                 }
                 if (DEBUG && !packet.isHeartbeat()) {
                     StringBuilder builder = new StringBuilder();
-                    builder.append("sending packets to ").append(neighbour.getId()).append(" ").append(+neighbour.getPort()).append(" heartbeat= ").append(packet.isHeartbeat()).append(" seq= ").append(packet.getSeq());
-                    String str = builder.toString();
-                    if (!packet.getAdvertisingRouter().equals(id)) {
-                        str += " forward from " + packet.getPrintableName();
-                    }
-                    System.err.println(str);
+                    builder.append("sending packets to ")
+                            .append(neighbour.getId())
+                            .append(" ")
+                            .append(+neighbour.getPort())
+                            .append(" heartbeat= ")
+                            .append(packet.isHeartbeat())
+                            .append(" seq= ").append(packet.getSeq());
+
+                    if (!packet.getAdvertisingRouter().equals(id))
+                        builder.append(" forward from ").append(packet.getPrintableName());
+
+                    System.err.println(builder.toString());
                 }
                 send.setAddress(InetAddress.getByName("127.0.0.1"));
                 send.setPort(neighbour.getPort());
@@ -387,7 +393,7 @@ public class Lsr {
      * @return the final searching state.
      */
     public G_SearchingNode getShortestPath(G_Node starting, G_Node end) throws Exception {
-        PriorityQueue<G_SearchingNode> queue = new PriorityQueue();
+        PriorityQueue<G_SearchingNode> queue = new PriorityQueue<G_SearchingNode>();
         G_SearchingNode node = new G_SearchingNode(starting, null, 0);
         queue.add(node);
         while (!queue.isEmpty()) {
@@ -435,7 +441,7 @@ public class Lsr {
     public Neighbour getNeighbourById(String id) {
         synchronized (neighbours) {
             for (Neighbour neighbour : neighbours) {
-                if (neighbour.equals(id))
+                if (neighbour.getId().equals(id))
                     return neighbour;
             }
         }

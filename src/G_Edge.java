@@ -7,9 +7,9 @@ public class G_Edge {
     private G_Node[] connected = new G_Node[2];
     private float cost;
 
-    public G_Edge(G_Node nodea, G_Node nodeb, float cost) {
-        connected[0] = nodea;
-        connected[1] = nodeb;
+    public G_Edge(G_Node nodeA, G_Node nodeB, float cost) {
+        connected[0] = nodeA;
+        connected[1] = nodeB;
         this.cost = cost;
     }
 
@@ -45,7 +45,7 @@ public class G_Edge {
                 if (in == temp)
                     isIn = true;
 
-            if (isIn == false)
+            if (!isIn)
                 return false;
         }
         return true;

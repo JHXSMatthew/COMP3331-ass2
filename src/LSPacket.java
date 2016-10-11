@@ -64,9 +64,11 @@ public class LSPacket {
         int length = PacketUtils.get4BytesInt(packet, 6);
         if (!isHeartbeat()) {
             data = new byte[length];
-            for (int i = 0; i < data.length; i++) {
+            System.arraycopy(packet,HEADER_LENGTH,data,0,data.length);
+            /*for (int i = 0; i < data.length; i++) {
                 data[i] = packet[i + HEADER_LENGTH];
             }
+            */
         }
 
     }
@@ -86,7 +88,7 @@ public class LSPacket {
     /**
      * to unpack the packet
      *
-     * @precondition !expired, !empty , seq may > current cache seq
+     * @Precondition !expired, !empty , seq may > current cache seq
      */
     public void unpack(G_Graph graph) {
         if (data.length % 5 != 0) {
@@ -117,7 +119,7 @@ public class LSPacket {
 
 
     /**
-     * @return the advertaising router
+     * @return the advertising router
      */
     public String getAdvertisingRouter() {
         return advertisingRouter;
@@ -203,9 +205,11 @@ public class LSPacket {
             pack();
 
         int length = HEADER_LENGTH;
+
         try {
             length += data.length;
         } catch (NullPointerException e) {
+            //what ? empty, yse , it should be empty.
 
         }
 
@@ -231,9 +235,11 @@ public class LSPacket {
         PacketUtils.fill4BytesFromInt(seq, packet, 2);
         if (!isHeartbeat()) {
             PacketUtils.fill4BytesFromInt(data.length, packet, 6);
+            System.arraycopy(data,0,packet,HEADER_LENGTH,data.length);
+            /*
             for (int i = HEADER_LENGTH; i < data.length + HEADER_LENGTH; i++)
                 packet[i] = data[i - HEADER_LENGTH];
-            //System.arraycopy(data, 0, packet, HEADER_LENGTH , data.length);
+            */
         } else {
             PacketUtils.fill4BytesFromInt(0, packet, 6);
         }

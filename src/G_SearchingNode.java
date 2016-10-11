@@ -45,7 +45,7 @@ public class G_SearchingNode implements Comparable<G_SearchingNode> {
                 return last.node;
             }
         } else {
-            System.err.println("What is this fking error ?, how could that be possible. I cannot accept this!");
+            System.err.println("What is this error ?, how could that be possible. I cannot accept this!");
             return node;
         }
         return last.getDirectNode();

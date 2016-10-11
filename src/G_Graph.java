@@ -6,7 +6,7 @@ import java.util.*;
  */
 public class G_Graph {
 
-    private List<G_Node> nodes;
+    private final List<G_Node> nodes;
     private Set<G_Edge> edges;
 
     public G_Graph() {
@@ -18,7 +18,7 @@ public class G_Graph {
      * @param nodeA one node
      * @param nodeB the other node
      * @param cost  the cost to reach each other
-     * @return
+     * @return the connectede Nodes
      */
     public G_Edge connect(G_Node nodeA, G_Node nodeB, float cost) {
         G_Edge edge = new G_Edge(nodeA, nodeB, cost);
@@ -32,10 +32,10 @@ public class G_Graph {
 
     public List<G_Node> getAllNodes() {
         synchronized (this.nodes) {
-            List<G_Node> nodes = new ArrayList<G_Node>();
+            List<G_Node> copy = new ArrayList<G_Node>(); //copy to a new array prevent the concurrentModification exception.
             nodes.addAll(this.nodes);
+            return copy;
         }
-        return nodes;
     }
 
     /**
@@ -53,7 +53,7 @@ public class G_Graph {
 
     /**
      * @param id the node to add
-     * @return
+     * @return the G_Node object
      */
     public G_Node add(String id) {
         G_Node node = new G_Node(id);
@@ -78,7 +78,7 @@ public class G_Graph {
 
     /**
      * @param id the id of removal
-     * @return
+     * @return the removal node
      */
     public synchronized G_Node remove(String id) {
         Iterator<G_Node> iterator = nodes.iterator();

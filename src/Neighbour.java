@@ -31,7 +31,7 @@ public class Neighbour {
     /**
      * @return true if received heart beats in the interval, false if not
      */
-    public boolean isAlive() {
+    public boolean isNeighbourAlive() {
         boolean returnValue = beat;
         if (!beat) {
             cumulativeMiss++;
