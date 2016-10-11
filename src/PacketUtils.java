@@ -18,10 +18,25 @@ public class PacketUtils {
         data[offset + 3] = (byte) (i >> 0);
     }
 
-    public static void fill4BytesToBuffer(int i, ByteBuffer buffer) {
+    public static void fill4BytesIntToBuffer(int i, ByteBuffer buffer) {
         buffer.put((byte) (i >> 24));
         buffer.put((byte) (i >> 16));
         buffer.put((byte) (i >> 8));
         buffer.put((byte) (i >> 0));
+    }
+
+
+    public static void fill4BytesFloatToBuffer(float i, ByteBuffer buffer) {
+        fill4BytesIntToBuffer(Float.floatToIntBits(i),buffer);
+    }
+
+
+    public static float get4ByteFloat(byte[] data , int offset){
+        return Float.intBitsToFloat(get4BytesInt(data,offset));
+    }
+
+    public static void fill4BytesFloat(float f, byte[] data, int offset){
+        int floatBytes = Float.floatToIntBits(f);
+        fill4BytesFromInt(floatBytes,data,offset);
     }
 }

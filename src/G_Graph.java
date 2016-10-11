@@ -9,13 +9,19 @@ public class G_Graph {
     private List<G_Node> nodes;
     private Set<G_Edge> edges;
 
-
     public G_Graph() {
         nodes = Collections.synchronizedList(new ArrayList<G_Node>());
         edges = Collections.synchronizedSet(new HashSet<G_Edge>());
     }
 
-    public G_Edge connect(G_Node nodeA, G_Node nodeB, int cost) {
+    /**
+     *
+     * @param nodeA one node
+     * @param nodeB the other node
+     * @param cost the cost to reach each other
+     * @return
+     */
+    public G_Edge connect(G_Node nodeA, G_Node nodeB, float cost) {
         G_Edge edge = new G_Edge(nodeA, nodeB, cost);
 
         if (isEdgeThere(edge))
@@ -26,9 +32,18 @@ public class G_Graph {
     }
 
     public List<G_Node> getAllNodes() {
+        synchronized (this.nodes) {
+            List<G_Node> nodes = new ArrayList<G_Node>();
+            nodes.addAll(this.nodes);
+        }
         return nodes;
     }
 
+    /**
+     *
+     * @param edge the edge to check
+     * @return true if edge in the graph
+     */
     public boolean isEdgeThere(G_Edge edge) {
         for (G_Edge e : edges) {
             if (e.isEdge(edge.getNodes())) {
@@ -38,12 +53,23 @@ public class G_Graph {
         return false;
     }
 
+    /**
+     *
+     * @param id the node to add
+     * @return
+     */
     public G_Node add(String id) {
         G_Node node = new G_Node(id);
         this.nodes.add(node);
         return node;
     }
 
+    /**
+     *
+     * @param node1 one node
+     * @param node2 the other
+     * @return the edge
+     */
     public G_Edge getEdge(G_Node node1, G_Node node2) {
         List<G_Edge> edges = getAllConnections(node1);
         for (G_Edge edge : edges) {
@@ -54,8 +80,12 @@ public class G_Graph {
         return null;
     }
 
+    /**
+     *
+     * @param id the id of removal
+     * @return
+     */
     public synchronized G_Node remove(String id) {
-        System.err.println("Removing id=" + id);
         Iterator<G_Node> iterator = nodes.iterator();
         G_Node node = null;
         while (iterator.hasNext()) {
@@ -70,11 +100,16 @@ public class G_Graph {
             System.err.println("Node not exist!");
             return null;
         }
+        boolean print = false;
         List<G_Edge> allConnected = getAllConnections(node);
         if (allConnected != null && !allConnected.isEmpty()) {
             for (G_Edge edge : allConnected) {
+                print = true;
                 edges.remove(edge);
             }
+        }
+        if(print){
+            System.err.println("Neighbour " + id + " is Down");
         }
         return node;
     }

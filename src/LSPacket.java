@@ -13,37 +13,34 @@ public class LSPacket {
 
     /*
                           ------------------ Packet header ------------------ 26 bytes
-
-                  0-15  bytes --- long   ---  the age
-                  16    byte  --- String ---  advertising router id  ---
-                  17    byte  ---  |R|R|R|R|R|R|R|k
+                  0    byte  --- String ---  advertising router id  ---
+                  1    byte  ---  |R|R|R|R|R|R|R|k
                        K : keep alive, true if it is a heartbeat packet
                        R : Reserved
-                  18-21 bytes --- int    ---  Seq number , that's the "version" of this packet.
-                  22-25 bytes --- int    ---  the actual data segment length, HEADER EXCLUDED
-
+                  2-5 bytes --- int    ---  Seq number , that's the "version" of this packet.
+                  6-9 bytes --- int    ---  the actual data segment length, HEADER EXCLUDED
                           ------------------ data seg ------------------
                   {
-                    26    byte  --- String  ---  id of Neighbour
-                    27-30 bytes --- int     ---  the cost from advertising router to the router above
-                  }* total bytes 5 bytes
-                  ( n segments of this type of data, where n <= 0) , data seg maybe empty if
+                    10    byte  --- String  ---  id of Neighbour
+                    11-14 bytes --- float     ---  the cost from advertising router to the router above
+                  }*  5 bytes in total
+                  ( n segments of this type of data, where n <= 0) , data seg maybe empty if it is a heartbeat packet
 
      */
 
 
     //static constants
-    private final static int HEADER_LENGTH = 26;
+    private final static int HEADER_LENGTH = 10;
     //attributes of this packet, included in packet header
     private String advertisingRouter;
     private boolean[] flags = new boolean[8];
-    private long age = 0;
+    //private long age = 0;
     private int seq = -1;
     //data segment
-    private HashMap<G_Node, Integer> connections = new HashMap<G_Node, Integer>();
+    private HashMap<G_Node, Float> connections = new HashMap<G_Node, Float>();
     private byte[] data = null;
     // dynamic wrapper stuff
-    private boolean expired = true;
+    //private boolean expired = true;
 
 
     /**
@@ -53,32 +50,31 @@ public class LSPacket {
      * @param packet the receiving data
      */
     public LSPacket(byte[] packet) {
-        age = (long) PacketUtils.get4BytesInt(packet, 0) << 32 * 3
+        /*age = (long) PacketUtils.get4BytesInt(packet, 0) << 32 * 3
                 | PacketUtils.get4BytesInt(packet, 4) << 32 * 2
                 | PacketUtils.get4BytesInt(packet, 8) << 32
-                | PacketUtils.get4BytesInt(packet, 12);
-        expired = System.currentTimeMillis() <= age;
+                | PacketUtils.get4BytesInt(packet, 12);*/
+        //expired = System.currentTimeMillis() <= age;
 
-        advertisingRouter = new String(Arrays.copyOfRange(packet, 16, 17));
+        advertisingRouter = Character.toString((char)packet[0]);
         //bits to booleans, load flags
         for (int i = 0; i < 8; i++)
-            flags[i] = (packet[17] & (0b00000001 << i)) != 0;
+            flags[i] = (packet[1] & (0b00000001 << i)) != 0;
 
-        seq = PacketUtils.get4BytesInt(packet, 18);
-        int length = PacketUtils.get4BytesInt(packet, 22);
+        seq = PacketUtils.get4BytesInt(packet, 2);
+        int length = PacketUtils.get4BytesInt(packet, 6);
         if (!isHeartbeat()) {
             data = new byte[length];
             for (int i = 0; i < data.length; i++) {
                 data[i] = packet[i + HEADER_LENGTH];
             }
-
         }
 
     }
 
-    public LSPacket(String advertisingRouter, boolean isHeartbeat, int seq, long ages, G_Edge... connections) {
+    public LSPacket(String advertisingRouter, boolean isHeartbeat, int seq, G_Edge... connections) {
         this.seq = seq;
-        this.age = System.currentTimeMillis() + ages;
+        //this.age = System.currentTimeMillis() + ages;
         this.flags[0] = isHeartbeat;
         this.advertisingRouter = advertisingRouter;
         if (!isHeartbeat) {
@@ -98,8 +94,8 @@ public class LSPacket {
             System.err.println("packet error ? DL=" + data.length + " from " + getAdvertisingRouter());
         }
         for (int i = 0; i < data.length; i += 5) {
-            String id = new String(Arrays.copyOfRange(data, i, i + 1));
-            connections.put(graph.getNode(id, true), PacketUtils.get4BytesInt(data, i + 1));
+            String id = Character.toString((char)data[i]);
+            connections.put(graph.getNode(id, true), PacketUtils.get4ByteFloat(data, i + 1));
         }
 
     }
@@ -113,7 +109,7 @@ public class LSPacket {
         ByteBuffer buffer = ByteBuffer.allocate(connections.size() * 5);
         for (G_Node node : connections.keySet()) {
             buffer.put((byte) node.getId().charAt(0));
-            PacketUtils.fill4BytesToBuffer(connections.get(node), buffer);
+            PacketUtils.fill4BytesFloatToBuffer(connections.get(node), buffer);
         }
         buffer.flip();
         data = buffer.array();
@@ -150,7 +146,7 @@ public class LSPacket {
         return seq;
     }
 
-    public int getCost(G_Node node) {
+    public float getCost(G_Node node) {
         return connections.containsKey(node) ? connections.get(node) : -1;
     }
 
@@ -158,9 +154,11 @@ public class LSPacket {
         return connections.keySet();
     }
 
+    /*
     public long getAge() {
         return age;
     }
+    */
 
     public String getPrintableName() {
         return "id :" + this.getAdvertisingRouter();
@@ -170,9 +168,9 @@ public class LSPacket {
      * @param neighbour the neighbour of the advertising router
      * @param cost      the cost
      */
-    public void addConnectionData(G_Node neighbour, int cost) {
+    public void addConnectionData(G_Node neighbour, float cost) {
         if (connections == null) {
-            connections = new HashMap<G_Node, Integer>();
+            connections = new HashMap<G_Node, Float>();
         }
         connections.put(neighbour, cost);
     }
@@ -191,9 +189,10 @@ public class LSPacket {
         addConnectionData(theOne, edge.getCost());
     }
 
-    public boolean isExpired() {
-        return false; //TODO: confirm this when finish most of features
+    /*public boolean isExpired() {
+        return false;
     }
+    */
 
 
     /**
@@ -213,15 +212,15 @@ public class LSPacket {
 
         byte[] packet = new byte[length];
         //long to bytes array, so bad to do so.
-
+    /*
         PacketUtils.fill4BytesFromInt((int) age >> 12, packet, 0);
         PacketUtils.fill4BytesFromInt((int) age >> 8, packet, 4);
         PacketUtils.fill4BytesFromInt((int) age >> 4, packet, 8);
         PacketUtils.fill4BytesFromInt((int) age >> 0, packet, 12);
-
+    */
 
         // id part
-        packet[16] = (byte) advertisingRouter.charAt(0);
+        packet[0] = (byte) advertisingRouter.charAt(0);
         byte flagsRep = 0;
         for (int i = 0; i < 8; i++) {
             if (!flags[i]) {
@@ -229,15 +228,15 @@ public class LSPacket {
             }
             flagsRep = (byte) (flagsRep | (0b00000001 << i));
         }
-        packet[17] = flagsRep;
-        PacketUtils.fill4BytesFromInt(seq, packet, 18);
+        packet[1] = flagsRep;
+        PacketUtils.fill4BytesFromInt(seq, packet, 2);
         if (!isHeartbeat()) {
-            PacketUtils.fill4BytesFromInt(data.length, packet, 22);
+            PacketUtils.fill4BytesFromInt(data.length, packet, 6);
             for (int i = HEADER_LENGTH; i < data.length + HEADER_LENGTH; i++)
                 packet[i] = data[i - HEADER_LENGTH];
             //System.arraycopy(data, 0, packet, HEADER_LENGTH , data.length);
         } else {
-            PacketUtils.fill4BytesFromInt(0, packet, 22);
+            PacketUtils.fill4BytesFromInt(0, packet, 6);
         }
         return packet;
     }

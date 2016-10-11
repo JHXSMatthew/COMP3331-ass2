@@ -6,20 +6,18 @@
 public class G_SearchingNode implements Comparable<G_SearchingNode> {
 
     private G_SearchingNode last;
-    private int cost; // the cumulative cost.
+    private float cost; // the cumulative cost.
     private G_Node node; // the reference of original node.
 
     /**
      * @param previous the previous node
      * @param cost     the cost to get here from previous node
      */
-    public G_SearchingNode(G_Node node, G_SearchingNode previous, int cost) {
+    public G_SearchingNode(G_Node node, G_SearchingNode previous, float cost) {
         this.last = previous;
-        if (previous == null) {
-            cost = 0;
-        } else {
+        if (previous != null)
             this.cost = previous.cost + cost;
-        }
+
         this.node = node;
     }
 
@@ -61,6 +59,6 @@ public class G_SearchingNode implements Comparable<G_SearchingNode> {
 
     @Override
     public int compareTo(G_SearchingNode o) {
-        return cost - o.cost;
+        return (int)(cost*10) - (int)(o.cost *10);
     }
 }

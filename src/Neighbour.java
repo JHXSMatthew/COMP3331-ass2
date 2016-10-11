@@ -7,13 +7,13 @@
 public class Neighbour {
 
     private final String id;
-    private final int cost;
+    private final float cost;
     private final int port;
 
     private boolean beat = false;
     private byte cumulativeMiss = 0;
 
-    public Neighbour(String id, int cost, int port) {
+    public Neighbour(String id, float cost, int port) {
         this.id = id;
         this.cost = cost;
         this.port = port;
@@ -44,7 +44,7 @@ public class Neighbour {
         return id;
     }
 
-    public int getCost() {
+    public float getCost() {
         return cost;
     }
 

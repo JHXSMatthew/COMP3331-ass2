@@ -5,9 +5,9 @@
 public class G_Edge {
 
     private G_Node[] connected = new G_Node[2];
-    private int cost;
+    private float cost;
 
-    public G_Edge(G_Node nodea, G_Node nodeb, int cost) {
+    public G_Edge(G_Node nodea, G_Node nodeb, float cost) {
         connected[0] = nodea;
         connected[1] = nodeb;
         this.cost = cost;
@@ -27,11 +27,11 @@ public class G_Edge {
         return connected[0];
     }
 
-    public int getCost() {
+    public float getCost() {
         return cost;
     }
 
-    public void setCost(int c) {
+    public void setCost(float c) {
         this.cost = c;
     }
 

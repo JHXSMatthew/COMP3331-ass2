@@ -11,7 +11,6 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Created by matthew on 8/10/16.
  * The main router class.
- * //TODO 1. float cost 2. remove fking time stuff
  *
  */
 public class Lsr {
@@ -21,8 +20,9 @@ public class Lsr {
     private final static int KEEP_ALIVE_INTERVAL = 25;
     private final static int UPDATE_INTERVAL = 1000;
     private final static int ROUTE_UPDATE_INTERVAL = 30000;
-    private final static int TTL_KEEP_ALIVE = 200;
+   /* private final static int TTL_KEEP_ALIVE = 200;
     private final static int TTL_LSP = 2000;
+    */
     private final String id;
     private final int port;
     private int seq = 0;
@@ -100,7 +100,6 @@ public class Lsr {
                             if (neighbour.isDead()) {
                                 neighbourIterator.remove();
                                 graph.remove(neighbour.getId());
-                                System.err.println("I heard Neighbour " + neighbour.getId() + " dead, RIP");
                             }
                         }
                     }
@@ -139,7 +138,7 @@ public class Lsr {
                 curr++;
                 StringTokenizer tokenizer = new StringTokenizer(readLine, " ");
                 neighbours.add(new Neighbour(tokenizer.nextToken()
-                        , Integer.parseInt(tokenizer.nextToken())
+                        , Float.parseFloat(tokenizer.nextToken())
                         , Integer.parseInt(tokenizer.nextToken())));
                 if (curr > num)
                     break;
@@ -160,14 +159,12 @@ public class Lsr {
             lsPacket = new LSPacket(id
                     , heartbeats
                     , seq
-                    , System.currentTimeMillis() + TTL_KEEP_ALIVE
                     , (G_Edge) null);
         } else {
             List<G_Edge> temp = graph.getAllConnections(id);
             lsPacket = new LSPacket(id
                     , heartbeats
                     , seq++
-                    , System.currentTimeMillis() + TTL_LSP
                     , temp.toArray(new G_Edge[temp.size()]));
         }
         forwardPacket(lsPacket, (Neighbour) null);
@@ -198,12 +195,7 @@ public class Lsr {
                 e.printStackTrace();
             }
             LSPacket lsPacket = new LSPacket(packet.getData());
-            //System.out.println("packet received!");
 
-            if (lsPacket.isExpired()) {
-                System.out.println("Expired packet! " + lsPacket.getAge() + "vs" + System.currentTimeMillis());
-                continue;
-            }
             Neighbour neighbour = getNeighbourByPort(packet.getPort());
             if (lsPacket.isHeartbeat()) {
                 onHeartbeatsReceived(lsPacket, neighbour);
@@ -262,7 +254,7 @@ public class Lsr {
             for (G_Edge edge : allC_E) {
                 if (edge.isEdge(node, advertiser)) {
                     edgeThere = true;
-                    int ackCost = packet.getCost(node);
+                    float ackCost = packet.getCost(node);
                     if (edge.getCost() != ackCost) {
                         edge.setCost(ackCost);
                         invalid();
@@ -370,6 +362,9 @@ public class Lsr {
                 if (DEBUG) {
                     e.printStackTrace();
                 }
+                //TODO: check if this is necessary, but it's obvious truth, node cannot reach should be removed in order
+                //to reduce the cost of searching.
+                graph.remove(node.getId());
             }
         }
 
