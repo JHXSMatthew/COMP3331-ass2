@@ -32,7 +32,7 @@ public class G_SearchingNode implements Comparable<G_SearchingNode> {
     public String getSearchingString() {
         StringBuilder builder = new StringBuilder();
         getPath(builder);
-        return "least-cost path to node " + node.getId() + ": " + builder.toString() + " and the cost is " + cost;
+        return "least-cost path to node " + node.getId() + ": " + builder.toString() + " and the cost is " + ((int)(cost*10))/10f;
     }
 
     public G_Node getNode() {

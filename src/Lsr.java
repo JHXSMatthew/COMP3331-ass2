@@ -109,7 +109,7 @@ public class Lsr {
                     }
                 }
 
-                //shortest oath
+                //shortest path
                 if (count == ROUTE_UPDATE_INTERVAL) {
                     if (updateRouter) {
                         updateRouter();
@@ -119,7 +119,7 @@ public class Lsr {
             }
         }, 0, 1);
 
-        System.out.println("Router: " + id + " Listen on: " + port);
+        System.err.println("Router: " + id + " Listen on: " + port);
         listen();
     }
 
@@ -376,7 +376,7 @@ public class Lsr {
 
         //remove the old forward "table"
         forwardTable.clear();
-        System.out.println("Router update ...");
+        System.err.println("Router update ...");
         for (G_SearchingNode searchingNode : searchingNodes) {
             System.out.println(searchingNode.getSearchingString());
             forwardTable.put(searchingNode.getNode(), graph.getEdge(graph.getNode(id, false), searchingNode.getDirectNode()));
