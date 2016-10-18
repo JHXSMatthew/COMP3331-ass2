@@ -85,7 +85,7 @@ public class T_ConfigGenerator {
 
 
                 BufferedWriter writer = new BufferedWriter(new FileWriter(f));
-                writer.write(String.valueOf(nodes.size()));
+                writer.write(String.valueOf(graph.getAllConnections(node).size()));
                 writer.write(System.lineSeparator());
 
                 List<G_Edge> connected = graph.getAllConnections(node);
