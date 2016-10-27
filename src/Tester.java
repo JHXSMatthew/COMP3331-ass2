@@ -28,7 +28,7 @@ public class Tester {
      * @param argv arguments
      */
 
- //================================== YOU MIGHT CHANGE THOSE ===========================================
+//================================== YOU MIGHT CHANGE THOSE ===========================================
     // in seconds,  that should be ~1.2 times your ROUTE_UPDATE_INTERVAL (i.e. you assume your code can calculate
     //the whole graph within COUNT seconds.
     // if you are not sure, leave it as 35 - 40.
@@ -36,6 +36,9 @@ public class Tester {
 
     //using variable %node%  %port% %config% for three arguments. you may change this line
     private static String STARTING_COMMAND ="java Lsr %node% %port% %config%";
+
+    //debug your program, print everything from your standout.
+    private static boolean debugAll = true;
 //======================================================================================================
 
     private static char STARTING_CHAR = 'A';
@@ -99,6 +102,23 @@ public class Tester {
         System.out.println("by Matthew Yu");
         System.out.println("Note: this does not guarantee your code is prefect. you should do you own tests anyway.");
         System.out.println();
+
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                try {
+                    System.err.println("kill all processes....");
+                    for(ProcessWrapper wrapper : processes){
+                        try {
+                            wrapper.close();
+                        }catch(IOException e){
+                        }
+                    }
+                    System.err.println("done!");
+                } catch (Exception e) {
+
+                }
+            }
+        });
     }
 
     public Tester(int ... tests){
@@ -214,25 +234,41 @@ public class Tester {
                 HashMap<String,Float> costMap = new HashMap<String,Float>();
                 for(String s : answer)
                     costMap.put(s.replaceAll("least-cost path to node ","").replaceAll(": .*",""),Float.parseFloat(s.replaceAll(".*is ","").replaceAll("is ","")));
+                boolean failed = false;
+
+                if(allOut.isEmpty() || allOut.size() != answer.size()){
+                    failed = true;
+                    System.out.println("You output maybe empty or count does not matched!");
+                }
 
                 for(String s : allOut){
+                    if(failed)
+                        break;
                     String id = s.replaceAll("least-cost path to node ","").replaceAll(": .*","");
                     float cost = Float.parseFloat(s.replaceAll(".*is ","").replaceAll("is ",""));
                     if(costMap.get(id) != cost){
                         System.out.println("unmatched output found, please check !");
-                        System.out.println(" -- Test No." + tests[curr]);
-                        System.out.println(" -- Node Id." + temp.getName());
-
-                        System.out.println("↓↓↓↓↓↓ Yours ↓↓↓↓↓↓");
-                        System.out.println(getStringFromList(allOut));
-                        System.out.println("↓↓↓↓↓↓ Mine ↓↓↓↓↓↓");
-                        System.out.println(getStringFromList(answer));
-                        System.out.println("Note: you may have the same costs but different paths, that's fine.");
-                        System.out.println(" Press enter to continue tests ....");
-                        failAny = true;
-                        return false;
+                        failed = true;
+                        break;
                     }
+                }
+                if(failed){
+                    System.out.println(" -- Test No." + tests[curr]);
+                    System.out.println(" -- Node Id." + temp.getName());
 
+                    System.out.println("↓↓↓↓↓↓ Yours ↓↓↓↓↓↓");
+                    System.out.println("Total Lines: " + (allOut.isEmpty() ? 0 :allOut.size()));
+
+                    System.out.println(getStringFromList(allOut));
+
+                    System.out.println("↓↓↓↓↓↓ Mine ↓↓↓↓↓↓");
+                    System.out.println("Total Lines: " + answer.size());
+
+                    System.out.println(getStringFromList(answer));
+                    System.out.println("Note: you may have the same costs but different paths, that's fine.");
+                    System.out.println(" Press enter to continue tests ....");
+                    failAny = true;
+                    return false;
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -282,7 +318,10 @@ public class Tester {
                     builder.append(s)
                             .append(System.lineSeparator());
                     i++;
+                }else if(debugAll){
+                    System.err.println("[DEBUG] " + node + " :" + s );
                 }
+
                 if(i >= total -1){
                     break;
                 }
@@ -298,11 +337,6 @@ public class Tester {
         public String getNode(){
             return node;
         }
-
-
-
-
-
     }
 
 }

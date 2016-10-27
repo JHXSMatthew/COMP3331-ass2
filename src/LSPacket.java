@@ -70,7 +70,6 @@ public class LSPacket {
             }
             */
         }
-
     }
 
     public LSPacket(String advertisingRouter, boolean isHeartbeat, int seq, G_Edge... connections) {
